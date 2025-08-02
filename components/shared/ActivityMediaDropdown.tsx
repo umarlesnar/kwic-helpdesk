@@ -43,6 +43,8 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
 
   const checkForMedia = async () => {
     try {
+      console.log('Checking for media for activity:', activityId);
+      
       const params = new URLSearchParams({
         associatedTypes: 'activity',
         associatedId: activityId,
@@ -57,7 +59,11 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Media check response for activity', activityId, ':', data);
         setMedia(data.media);
+        setHasCheckedMedia(true);
+      } else {
+        console.error('Failed to check media for activity:', response.status, await response.text());
         setHasCheckedMedia(true);
       }
     } catch (error) {
