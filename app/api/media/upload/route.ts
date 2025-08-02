@@ -11,7 +11,7 @@ const uploadRequestSchema = z.object({
   contentType: z.string().min(1, 'Content type is required'),
   size: z.number().min(1, 'File size must be greater than 0'),
   associatedWith: z.object({
-    type: z.enum(['ticket', 'user', 'comment', 'system']),
+    type: z.enum(['ticket', 'user', 'comment', 'activity', 'system']),
     id: z.string().min(1, 'Associated ID is required')
   }),
   // Removed tags from schema
