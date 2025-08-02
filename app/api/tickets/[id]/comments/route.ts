@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
-import { connectToDatabase } from '@/lib/database';
 import mongoose from 'mongoose';
+import { connectToDatabase } from '@/lib/schemas';
+
 
 export const dynamic = 'force-dynamic';
 
