@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
+import { connectToDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,29 +68,44 @@ export async function POST(
     // Associate media with the activity if provided
     let attachments = [];
     if (media && media.length > 0) {
-      // Update media to associate with this activity
-      const updatedMedia = await Media.updateMany(
-        { _id: { $in: media } },
-        { 
-          $set: { 
-            'associatedWith.type': 'activity',
-            'associatedWith.id': activity._id
+      try {
+        console.log('Associating media with activity:', activity._id, 'Media IDs:', media);
+        
+        // Ensure database connection
+        await connectToDatabase();
+        
+        // Update media to associate with this activity
+        const updatedMedia = await Media.updateMany(
+          { _id: { $in: media } },
+          { 
+            $set: { 
+              'associatedWith.type': 'activity',
+              'associatedWith.id': activity._id
+            }
           }
-        }
-      );
+        );
+        
+        console.log('Media update result:', updatedMedia);
 
-      // Get the media objects for attachments
-      const mediaObjects = await Media.find({ _id: { $in: media } });
-      attachments = mediaObjects.map(m => ({
-        filename: m.filename,
-        originalName: m.originalName,
-        mimeType: m.mimeType,
-        size: m.size,
-        url: m.url
-      }));
+        // Get the media objects for attachments
+        const mediaObjects = await Media.find({ _id: { $in: media } });
+        console.log('Found media objects:', mediaObjects.length);
+        
+        attachments = mediaObjects.map(m => ({
+          filename: m.filename,
+          originalName: m.originalName,
+          mimeType: m.mimeType,
+          size: m.size,
+          url: m.url
+        }));
 
-      // Update the activity with attachments
-      await Database.updateActivity(activity._id, { attachments });
+        // Update the activity with attachments
+        const updatedActivity = await Database.updateActivity(activity._id, { attachments });
+        console.log('Activity updated with attachments:', updatedActivity);
+        
+      } catch (error) {
+        console.error('Error associating media with activity:', error);
+      }
     }
 
     console.log('Comment added successfully to ticket:', params.id);
