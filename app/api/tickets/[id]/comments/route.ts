@@ -3,10 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
-<<<<<<< HEAD
-=======
-import { connectToDatabase } from '@/lib/schemas';
->>>>>>> origin/main
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/schemas';
 
