@@ -9,15 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  Trash2, 
-  Image, 
-  Video, 
-  FileText, 
+import {
+  Search,
+  Filter,
+  Download,
+  Eye,
+  Trash2,
+  Image,
+  Video,
+  FileText,
   File,
   Calendar,
   User,
@@ -31,9 +31,10 @@ interface MediaGalleryProps {
   associatedWith?: {
     types: ('ticket' | 'comment' | 'activity' | 'user' | 'system')[];
     id: string;
+    activityIds?: string[];
   };
   onMediaSelect?: (media: any) => void;
-  hideFilterAndSearch?: boolean; 
+  hideFilterAndSearch?: boolean;
   onMediaRemoved?: (mediaId: string) => void; // New prop for removal callback
   selectable?: boolean;
   className?: string;
@@ -42,7 +43,7 @@ interface MediaGalleryProps {
 export function MediaGallery({
   associatedWith,
   onMediaSelect,
-  onMediaRemoved, 
+  onMediaRemoved,
   hideFilterAndSearch = false,
   selectable = false,
   className = ''
@@ -68,7 +69,7 @@ export function MediaGallery({
   const fetchMedia = async () => {
     try {
       setIsLoading(true);
-      
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '20',
@@ -78,11 +79,19 @@ export function MediaGallery({
 
       if (associatedWith) {
         associatedWith.types.forEach(type => {
-          params.append('associatedTypes', type); // backend will handle multiple
+          params.append('associatedTypes', type);
         });
-        params.append('associatedId', associatedWith.id);
+
+        // send ticketId
+        params.append('associatedIds', associatedWith.id);
+
+        // send all activityIds (if any)
+        (associatedWith.activityIds || []).forEach(id => {
+          params.append('associatedIds', id);
+        });
       }
-      
+
+
 
       if (searchTerm) {
         params.append('search', searchTerm);
@@ -116,14 +125,14 @@ export function MediaGallery({
   useEffect(() => {
     setPage(1);
   }, [associatedWith?.id, searchTerm, categoryFilter]);
-  
+
 
   const handleDownload = async (mediaItem: any) => {
     // Direct download for public files, use API for private (though all will be public now)
     if (mediaItem.isPublic && mediaItem.url) {
       window.open(mediaItem.url, '_blank');
     } else {
-       try {
+      try {
         const response = await fetch(`/api/media/${mediaItem._id}?download=true`, {
           headers: {
             'Authorization': `Bearer ${token}` // Still need auth for the API route
@@ -216,61 +225,61 @@ export function MediaGallery({
     <div className={`space-y-6 ${className}`}>
       {/* Filters */}
       {!hideFilterAndSearch && (
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search files..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="image">Images</SelectItem>
+                    <SelectItem value="video">Videos</SelectItem>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="document">Documents</SelectItem>
+                    <SelectItem value="text">Text Files</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Date Created</SelectItem>
+                    <SelectItem value="filename">Name</SelectItem>
+                    <SelectItem value="size">Size</SelectItem>
+                    <SelectItem value="downloadCount">Downloads</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Descending</SelectItem>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="flex gap-4">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="image">Images</SelectItem>
-                  <SelectItem value="video">Videos</SelectItem>
-                  <SelectItem value="pdf">PDF</SelectItem>
-                  <SelectItem value="document">Documents</SelectItem>
-                  <SelectItem value="text">Text Files</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt">Date Created</SelectItem>
-                  <SelectItem value="filename">Name</SelectItem>
-                  <SelectItem value="size">Size</SelectItem>
-                  <SelectItem value="downloadCount">Downloads</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortOrder} onValueChange={setSortOrder}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Descending</SelectItem>
-                  <SelectItem value="asc">Ascending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       )}
 
       {/* Media Grid */}
@@ -280,14 +289,14 @@ export function MediaGallery({
             <File className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No files found</h3>
             <p className="text-gray-600">
-              {searchTerm || categoryFilter !== 'all' 
+              {searchTerm || categoryFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : associatedWith?.types.includes('ticket') ? 'No files attached to this ticket yet.'
                   : associatedWith?.types.includes('comment') ? 'No files attached to this comment yet.'
                     : associatedWith?.types.includes('activity') ? 'No files attached to this activity yet.'
                       : associatedWith?.types.includes('user') ? 'No files attached to this user yet.'
                         : associatedWith?.types.includes('system') ? 'No files attached to this system yet.'
-                        : 'No files found. Upload a file to get started.'
+                          : 'No files found. Upload a file to get started.'
               }
             </p>
           </CardContent>
@@ -295,11 +304,10 @@ export function MediaGallery({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {media.map((mediaItem) => (
-            <Card 
+            <Card
               key={mediaItem._id} // Use _id for key
-              className={`hover:shadow-md transition-shadow ${
-                selectable ? 'cursor-pointer hover:border-blue-500' : ''
-              }`}
+              className={`hover:shadow-md transition-shadow ${selectable ? 'cursor-pointer hover:border-blue-500' : ''
+                }`}
               onClick={() => selectable && onMediaSelect?.(mediaItem)}
             >
               <CardContent className="p-4">

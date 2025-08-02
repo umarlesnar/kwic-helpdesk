@@ -352,6 +352,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
             </CardContent>
           </Card>
 
+          {/* Activity Feed */}
           <Card>
             <CardHeader>
               <CardTitle>Activity</CardTitle>
@@ -359,7 +360,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
             <CardContent>
               <div className="space-y-6">
                 {ticket.activities?.map((activity: any) => (
-                  <div key={activity._id} className="flex gap-4">
+                  <div key={activity._id} className="flex gap-4 relative">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
                         {activity.user?.name?.charAt(0).toUpperCase() || "?"}
@@ -378,6 +379,13 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                             Internal
                           </Badge>
                         )}
+                        {/* Dropdown button positioned absolutely */}
+                        <div className="absolute right-0 top-0 z-10">
+                          <ActivityMediaDropdown
+                            activityId={activity._id}
+                            activity={activity}
+                          />
+                        </div>
                       </div>
                       <div className="text-sm text-gray-700">
                         {activity.type === "comment" ? (
@@ -386,13 +394,6 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                           <p className="italic">{activity.content}</p>
                         )}
                       </div>
-                      
-                      {/* Media dropdown for this activity */}
-                      <ActivityMediaDropdown 
-                        activityId={activity._id}
-                        activity={activity}
-                        className="mt-2" 
-                      />
                     </div>
                   </div>
                 ))}
@@ -413,7 +414,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                   placeholder="Add a comment..."
                   rows={4}
                 />
-                {/* Media Upload & Gallery for comments */}
+                {/* Media Upload */}
                 <div className="space-y-2">
                   <label className="font-medium">Attach Media Files</label>
                   <MediaUpload
@@ -425,33 +426,14 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                       setCommentMediaIds((prev: string[]) => prev.filter((id: string) => id !== mediaId));
                     }}
                   />
-
-                  <MediaGallery
-                    associatedWith={{ types: ['ticket', 'comment'], id: ticketId }}
-                    onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])} // Allow selecting existing media
-                    onMediaRemoved={handleMediaGalleryRemove} // Pass the removal callback
-                    selectable
-                    className="mt-4"
-                  />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="internal-comment"
-                      checked={isInternal}
-                      onCheckedChange={setIsInternal}
-                    />
-                    <Label htmlFor="internal-comment" className="text-sm">
-                      Internal comment (not visible to customer)
-                    </Label>
-                  </div>
+
+                <div className="flex justify-end">
                   <Button
                     onClick={handleAddComment}
                     disabled={(!comment.trim() && commentMediaIds.length === 0) || isSubmittingComment}
                   >
-                    {isSubmittingComment ? (
-                      "Adding..."
-                    ) : (
+                    {isSubmittingComment ? "Adding..." : (
                       <>
                         <Send className="h-4 w-4 mr-2" />
                         Add Comment
@@ -459,6 +441,19 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                     )}
                   </Button>
                 </div>
+
+                {/* MediaGallery moved here */}
+                <MediaGallery
+                  associatedWith={{
+                    types: ['ticket', 'comment', 'activity'],
+                    id: ticketId,
+                    activityIds: ticket.activities?.map((a: { _id: any; id: any; }) => a._id || a.id) || []
+                  }}
+                  onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])}
+                  onMediaRemoved={handleMediaGalleryRemove}
+                  selectable
+                  className="mt-4"
+                />
               </div>
             </CardContent>
           </Card>

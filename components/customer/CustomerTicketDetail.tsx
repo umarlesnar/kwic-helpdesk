@@ -452,7 +452,9 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
 
                 {/* Moved MediaGallery here */}
                 <MediaGallery
-                  associatedWith={{ types: ['ticket', 'comment', 'activity'], id: ticketId }}
+                  associatedWith={{ types: ['ticket', 'comment', 'activity'], id: ticketId, 
+                    activityIds: ticket.activities?.map((a: { _id: any; id: any; }) => a._id || a.id) || []
+                  }}
                   onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])}
                   onMediaRemoved={handleMediaGalleryRemove}
                   selectable

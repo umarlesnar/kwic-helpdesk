@@ -11,7 +11,7 @@ const listMediaSchema = z.object({
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
   associatedTypes: z.array(z.enum(['ticket', 'user', 'comment', 'activity', 'system'])).optional(),
-  associatedId: z.string().optional(),
+  associatedIds: z.array(z.string()).optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
   search: z.string().optional(),
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       page: parseInt(url.searchParams.get('page') || '1'),
       limit: parseInt(url.searchParams.get('limit') || '20'),
       associatedTypes: url.searchParams.getAll('associatedTypes'),
-      associatedId: url.searchParams.get('associatedId') || undefined,
+      associatedIds: url.searchParams.getAll('associatedIds'),
       category: url.searchParams.get('category') || undefined,
       tags: url.searchParams.getAll('tags'),
       search: url.searchParams.get('search') || undefined,
@@ -48,15 +48,15 @@ export async function GET(request: NextRequest) {
     const validation = listMediaSchema.safeParse(queryParams);
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          error: 'Invalid query parameters', 
-          details: validation.error.errors 
+        {
+          error: 'Invalid query parameters',
+          details: validation.error.errors
         },
         { status: 422 }
       );
     }
 
-    const { page, limit, associatedTypes, associatedId, category, tags, search, sortBy, sortOrder } = validation.data;
+    const { page, limit, associatedTypes, associatedIds, category, tags, search, sortBy, sortOrder } = validation.data;
 
     // Build query
     const query: any = {};
@@ -79,16 +79,16 @@ export async function GET(request: NextRequest) {
     // Admins can see all files (no additional restrictions)
 
     // Apply filters
-    if (associatedId && (associatedTypes ?? []).length > 0) {
-      // Convert associatedId to ObjectId if it's a valid ObjectId string
-      const objectId = mongoose.Types.ObjectId.isValid(associatedId) 
-        ? new mongoose.Types.ObjectId(associatedId) 
-        : associatedId;
-      query['associatedWith.id'] = objectId;
+    if (associatedIds && associatedIds.length > 0 && (associatedTypes ?? []).length > 0) {
+      const objectIds = associatedIds.map(id =>
+        mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+      );
+      query['associatedWith.id'] = { $in: objectIds };
       query['associatedWith.type'] = { $in: associatedTypes };
     } else if ((associatedTypes ?? []).length > 0) {
       query['associatedWith.type'] = { $in: associatedTypes };
     }
+
 
     if (tags && tags.length > 0) {
       query.tags = { $in: tags };
@@ -118,16 +118,20 @@ export async function GET(request: NextRequest) {
           query.mimeType = 'application/pdf';
           break;
         case 'document':
-          query.mimeType = { $in: [
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          ]};
+          query.mimeType = {
+            $in: [
+              'application/msword',
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ]
+          };
           break;
         case 'spreadsheet':
-          query.mimeType = { $in: [
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          ]};
+          query.mimeType = {
+            $in: [
+              'application/vnd.ms-excel',
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ]
+          };
           break;
         case 'text':
           query.mimeType = { $regex: '^text/' };
