@@ -5,12 +5,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/shared/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Image, 
-  Video, 
-  FileText, 
+import {
+  ChevronDown,
+  ChevronUp,
+  Image,
+  Video,
+  FileText,
   File,
   Download,
   Eye
@@ -35,7 +35,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
     // Check for media on component mount or when activity changes
     if (activity?.attachments?.length > 0) {
       // If activity has attachments, use them directly
-      setMedia(activity.attachments.map(att => ({
+      setMedia(activity.attachments.map((att: { filename: any; }) => ({
         _id: `${activityId}-${att.filename}`, // Create a unique ID
         ...att
       })));
@@ -82,7 +82,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
   const fetchActivityMedia = async () => {
     try {
       setIsLoading(true);
-      
+
       const params = new URLSearchParams({
         associatedTypes: 'activity',
         associatedId: activityId,
@@ -147,14 +147,14 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
 
   // Show loading state or media count
   const mediaCount = media.length;
-  
+
   return (
     <div className={`${className}`}>
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-blue-500 hover:text-blue-700 p-1 h-auto"
+        className="text-xs text-green-500 hover:text-green-700 p-1 h-auto"
       >
         {isExpanded ? (
           <>
@@ -164,21 +164,21 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
         ) : (
           <>
             <ChevronDown className="h-3 w-3 mr-1" />
-            Show attachments ({isLoading ? '...' : mediaCount})
+            Attachments ({isLoading ? '...' : mediaCount})
           </>
         )}
       </Button>
 
       {isExpanded && (
-        <div className="mt-2 pl-4 border-l-2 border-gray-200">
+      <div className="absolute left-0 mt-1 w-64 p-1 z-20 bg-white shadow-lg rounded-md border border-gray-200">
           {isLoading ? (
             <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
             </div>
           ) : media.length === 0 ? (
             <p className="text-xs text-gray-500 py-2">No attachments found</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-0">
               {media.map((mediaItem, index) => (
                 <div key={mediaItem._id || index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -201,7 +201,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
                         className="h-6 w-6 p-0"
                         title="View/Download"
                       >
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

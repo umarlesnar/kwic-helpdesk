@@ -129,12 +129,12 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
   // Function to handle media removal from MediaGallery
   const handleMediaGalleryRemove = (mediaId: string) => {
     setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
-   };
+  };
 
   // Function to handle removal of an uploaded file from MediaUpload list
   const handleUploadedFileRemove = (mediaId: string) => {
     setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
-  };  
+  };
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
@@ -364,13 +364,14 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
             <CardContent>
               <div className="space-y-6">
                 {ticket.activities?.map((activity: any) => (
-                  <div key={activity.id} className="flex gap-4">
+                  <div key={activity.id} className="flex gap-4 relative">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
                         {activity.user?.name?.charAt(0).toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
+                      {/* Header row */}
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">
                           {activity.user?.name || 'Unknown User'}
@@ -383,7 +384,16 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                             Internal
                           </Badge>
                         )}
+                        {/* Dropdown button positioned absolutely */}
+                        <div className="absolute right-0 top-0 z-10">
+                          <ActivityMediaDropdown
+                            activityId={activity._id || activity.id}
+                            activity={activity}
+                          />
+                        </div>
                       </div>
+
+                      {/* Content */}
                       <div className="text-sm text-gray-700">
                         {activity.type === 'comment' ? (
                           <p className="whitespace-pre-wrap">{activity.content}</p>
@@ -391,13 +401,6 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                           <p className="italic">{activity.content}</p>
                         )}
                       </div>
-                      
-                      {/* Media dropdown for this activity */}
-                      <ActivityMediaDropdown 
-                        activityId={activity._id || activity.id}
-                        activity={activity}
-                        className="mt-2" 
-                      />
                     </div>
                   </div>
                 ))}
