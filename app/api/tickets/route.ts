@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
+import { Media } from '@/lib/schemas/media.schema';
+import { connectToDatabase } from '@/lib/schemas';
+import mongoose from 'mongoose';
 
 import { TicketUtils } from '@/lib/utils/ticketUtils';
 export const dynamic = 'force-dynamic';
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Session found for user:', session.email);
 
-    const { title, description, requestTypeId, priority = 'medium' } = await request.json();
+    const { title, description, requestTypeId, priority = 'medium', media = [] } = await request.json();
 
     if (!title || !description || !requestTypeId) {
       return NextResponse.json(
@@ -116,6 +119,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure database connection
+    await connectToDatabase();
+
     // Generate ticket number
     const { ticketNumber } = await TicketUtils.generateTicketNumber();
 
@@ -132,13 +138,74 @@ export async function POST(request: NextRequest) {
       teamId: requestType.teamId,
     });
 
-    // Create initial activity
+    // Process media attachments if provided
+    let attachments: Array<{
+      filename: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+      url: string;
+    }> = [];
+    
+    if (media && media.length > 0) {
+      try {
+        console.log('Processing media for ticket creation, Media IDs:', media);
+        
+        // Convert media IDs to ObjectIds and filter out invalid ones
+        const mediaObjectIds = media
+          .filter((id: any) => id && mongoose.Types.ObjectId.isValid(id))
+          .map((id: string) => new mongoose.Types.ObjectId(id));
+        
+        console.log('Valid media ObjectIds:', mediaObjectIds);
+        
+        if (mediaObjectIds.length > 0) {
+          // Get the media objects first
+          const mediaObjects = await Media.find({ _id: { $in: mediaObjectIds } });
+          console.log('Found media objects for ticket:', mediaObjects.length);
+          
+          if (mediaObjects.length > 0) {
+            // Create attachments array for the activity
+            attachments = mediaObjects.map(m => ({
+              filename: m.filename,
+              originalName: m.originalName,
+              mimeType: m.mimeType,
+              size: m.size,
+              url: m.url
+            }));
+
+            // Convert ticket._id to ObjectId  
+            const ticketObjectId = mongoose.Types.ObjectId.isValid(ticket._id) 
+              ? new mongoose.Types.ObjectId(ticket._id) 
+              : ticket._id;
+            
+            // Update media to associate with this ticket
+            const updatedMedia = await Media.updateMany(
+              { _id: { $in: mediaObjectIds } },
+              { 
+                $set: { 
+                  'associatedWith.type': 'ticket',
+                  'associatedWith.id': ticketObjectId
+                }
+              }
+            );
+            
+            console.log('Media association update result:', updatedMedia);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error processing media for ticket:', error);
+      }
+    }
+
+    // Create initial activity with attachments
     await Database.createActivity({
       ticketId: ticket._id,
       userId: user._id,
       type: 'comment',
       content: `Ticket created: ${title}`,
       isInternal: false,
+      attachments,
     });
 
     console.log('Ticket created successfully:', ticket._id);
