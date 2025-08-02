@@ -20,10 +20,11 @@ import { toast } from 'sonner';
 
 interface ActivityMediaDropdownProps {
   activityId: string;
+  activity?: any; // Pass the activity object to check attachments
   className?: string;
 }
 
-export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMediaDropdownProps) {
+export function ActivityMediaDropdown({ activityId, activity, className = '' }: ActivityMediaDropdownProps) {
   const { token } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [media, setMedia] = useState<any[]>([]);
@@ -31,9 +32,19 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
   const [hasCheckedMedia, setHasCheckedMedia] = useState(false);
 
   useEffect(() => {
-    // Check for media on component mount
-    checkForMedia();
-  }, [activityId]);
+    // Check for media on component mount or when activity changes
+    if (activity?.attachments?.length > 0) {
+      // If activity has attachments, use them directly
+      setMedia(activity.attachments.map(att => ({
+        _id: `${activityId}-${att.filename}`, // Create a unique ID
+        ...att
+      })));
+      setHasCheckedMedia(true);
+    } else {
+      // Otherwise check via API
+      checkForMedia();
+    }
+  }, [activityId, activity]);
 
   useEffect(() => {
     if (isExpanded && !media.length) {
@@ -43,8 +54,6 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
 
   const checkForMedia = async () => {
     try {
-      console.log('Checking for media for activity:', activityId);
-      
       const params = new URLSearchParams({
         associatedTypes: 'activity',
         associatedId: activityId,
@@ -59,11 +68,9 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Media check response for activity', activityId, ':', data);
         setMedia(data.media);
         setHasCheckedMedia(true);
       } else {
-        console.error('Failed to check media for activity:', response.status, await response.text());
         setHasCheckedMedia(true);
       }
     } catch (error) {
@@ -172,8 +179,8 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
             <p className="text-xs text-gray-500 py-2">No attachments found</p>
           ) : (
             <div className="space-y-2">
-              {media.map((mediaItem) => (
-                <div key={mediaItem._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+              {media.map((mediaItem, index) => (
+                <div key={mediaItem._id || index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {getFileIcon(mediaItem.mimeType)}
                     <div className="min-w-0 flex-1">
@@ -186,15 +193,17 @@ export function ActivityMediaDropdown({ activityId, className = '' }: ActivityMe
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      onClick={() => handleDownload(mediaItem)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      title="View/Download"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
+                    {mediaItem.url && (
+                      <Button
+                        onClick={() => window.open(mediaItem.url, '_blank')}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        title="View/Download"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

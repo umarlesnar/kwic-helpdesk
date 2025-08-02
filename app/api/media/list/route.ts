@@ -86,7 +86,6 @@ export async function GET(request: NextRequest) {
         : associatedId;
       query['associatedWith.id'] = objectId;
       query['associatedWith.type'] = { $in: associatedTypes };
-      console.log('Media list query with associatedId:', { associatedId, objectId, associatedTypes });
     } else if ((associatedTypes ?? []).length > 0) {
       query['associatedWith.type'] = { $in: associatedTypes };
     }

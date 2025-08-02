@@ -66,68 +66,78 @@ export async function POST(
       isInternal,
     });
     
-    console.log('Created activity:', activity);
-
-    // Associate media with the activity if provided
+    // Process media attachments if provided
     let attachments = [];
     if (media && media.length > 0) {
       try {
-        console.log('Associating media with activity:', activity._id, 'Media IDs:', media);
+        console.log('Processing media for activity:', activity._id, 'Media IDs:', media);
         
         // Ensure database connection
         await connectToDatabase();
         
-        // Update media to associate with this activity
         // Convert media IDs to ObjectIds
         const mediaObjectIds = media.map(id => 
           mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
         );
         
-        // Convert activity._id to ObjectId  
-        const activityObjectId = mongoose.Types.ObjectId.isValid(activity._id) 
-          ? new mongoose.Types.ObjectId(activity._id) 
-          : activity._id;
-        
-        const updatedMedia = await Media.updateMany(
-          { _id: { $in: mediaObjectIds } },
-          { 
-            $set: { 
-              'associatedWith.type': 'activity',
-              'associatedWith.id': activityObjectId
-            }
-          }
-        );
-        
-        console.log('Media update result:', updatedMedia);
-
-        // Get the media objects for attachments
+        // Get the media objects first
         const mediaObjects = await Media.find({ _id: { $in: mediaObjectIds } });
-        console.log('Found media objects:', mediaObjects.length);
+        console.log('Found media objects for activity:', mediaObjects.length);
         
-        attachments = mediaObjects.map(m => ({
-          filename: m.filename,
-          originalName: m.originalName,
-          mimeType: m.mimeType,
-          size: m.size,
-          url: m.url
-        }));
+        if (mediaObjects.length > 0) {
+          // Create attachments array for the activity
+          attachments = mediaObjects.map(m => ({
+            filename: m.filename,
+            originalName: m.originalName,
+            mimeType: m.mimeType,
+            size: m.size,
+            url: m.url
+          }));
 
-        // Update the activity with attachments
-        const updatedActivity = await Database.updateActivity(activity._id, { attachments });
-        console.log('Activity updated with attachments:', updatedActivity);
+          // Convert activity._id to ObjectId  
+          const activityObjectId = mongoose.Types.ObjectId.isValid(activity._id) 
+            ? new mongoose.Types.ObjectId(activity._id) 
+            : activity._id;
+          
+          // Update media to associate with this activity
+          const updatedMedia = await Media.updateMany(
+            { _id: { $in: mediaObjectIds } },
+            { 
+              $set: { 
+                'associatedWith.type': 'activity',
+                'associatedWith.id': activityObjectId
+              }
+            }
+          );
+          
+          console.log('Media association update result:', updatedMedia);
+
+          // Update the activity with attachments in the database
+          const updatedActivity = await Database.updateActivity(activity._id, { attachments });
+          console.log('Activity updated with attachments:', !!updatedActivity);
+        }
         
       } catch (error) {
-        console.error('Error associating media with activity:', error);
+        console.error('Error processing media for activity:', error);
       }
     }
 
     console.log('Comment added successfully to ticket:', params.id);
 
-    return NextResponse.json({
-      ...activity,
-      attachments,
+    // Fetch the updated activity to ensure we have the latest data
+    const finalActivity = attachments.length > 0 
+      ? await Database.getActivityById(activity._id)
+      : activity;
+
+    const responseActivity = {
+      ...(finalActivity || activity),
+      attachments: attachments.length > 0 ? attachments : (finalActivity?.attachments || []),
       user: user ? { id: user._id, name: user.name, email: user.email } : null,
-    }, { status: 201 });
+    };
+
+    console.log('Returning activity with attachments:', responseActivity.attachments?.length || 0);
+
+    return NextResponse.json(responseActivity, { status: 201 });
   } catch (error) {
     console.error('Create comment error:', error);
     return NextResponse.json(
