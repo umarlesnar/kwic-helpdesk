@@ -33,13 +33,16 @@ interface UploadFile {
 
 export interface MediaUploadRef {
   clearFiles: () => void;
+  uploadFiles: (associatedWith: { type: string; id: string }) => Promise<any[]>;
+  getSelectedFiles: () => UploadFile[];
 }
 
 interface MediaUploadProps {
-  associatedWith: {
-    type: 'ticket' | 'user' | 'comment' | 'system';
+  associatedWith?: {
+    type: 'ticket' | 'user' | 'comment' | 'activity' | 'system';
     id: string;
   };
+  deferUpload?: boolean; // New prop to defer uploads
   onUploadComplete?: (media: any) => void;
   onUploadError?: (error: string) => void;
   onUploadedFileRemoved?: (mediaId: string) => void;
@@ -52,6 +55,7 @@ interface MediaUploadProps {
 export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
   {
     associatedWith,
+    deferUpload = false,
     onUploadComplete,
     onUploadError,
     onUploadedFileRemoved,
@@ -75,6 +79,26 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
   useImperativeHandle(ref, () => ({
     clearFiles: () => {
       setFiles([]);
+    },
+    uploadFiles: async (newAssociatedWith: { type: string; id: string }) => {
+      const pendingFiles = files.filter(f => f.status === 'pending');
+      const uploadedMedia = [];
+      
+      for (const file of pendingFiles) {
+        try {
+          const media = await uploadFileWithAssociation(file, newAssociatedWith);
+          if (media) {
+            uploadedMedia.push(media);
+          }
+        } catch (error) {
+          console.error('Error uploading file:', file.file.name, error);
+        }
+      }
+      
+      return uploadedMedia;
+    },
+    getSelectedFiles: () => {
+      return files;
     }
   }));
 
@@ -95,7 +119,7 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
     return null;
   };
 
-  const uploadFile = async (uploadFile: UploadFile) => {
+  const uploadFileWithAssociation = async (uploadFile: UploadFile, targetAssociatedWith: { type: string; id: string }) => {
     try {
       setFiles(prev => prev.map(f => 
         f.id === uploadFile.id 
@@ -113,7 +137,7 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
           filename: uploadFile.file.name,
           contentType: uploadFile.file.type,
           size: uploadFile.file.size,
-          associatedWith,
+          associatedWith: targetAssociatedWith,
           tags: [],
           isPublic: true
         })
@@ -178,7 +202,7 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
           originalName: uploadFile.file.name,
           mimeType: uploadFile.file.type,
           uploadedBy: user?.id,
-          associatedWith,
+          associatedWith: targetAssociatedWith,
           tags: [],
           isPublic: true,
           expiresAt: undefined,
@@ -208,6 +232,8 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
 
       toast.success(`${uploadFile.file.name} uploaded successfully`);
       onUploadComplete?.(media);
+      
+      return media;
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -218,7 +244,17 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
       ));
       toast.error(`Failed to upload ${uploadFile.file.name}: ${errorMessage}`);
       onUploadError?.(errorMessage);
+      return null;
     }
+  };
+
+  // Legacy upload function for immediate uploads
+  const uploadFile = async (uploadFile: UploadFile) => {
+    if (!associatedWith) {
+      console.error('No associatedWith provided for immediate upload');
+      return;
+    }
+    return uploadFileWithAssociation(uploadFile, associatedWith);
   };
 
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
@@ -246,9 +282,13 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
 
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
-      newFiles.forEach(file => uploadFile(file));
+      
+      // Only upload immediately if not deferred
+      if (!deferUpload) {
+        newFiles.forEach(file => uploadFile(file));
+      }
     }
-  }, [files.length, maxFiles, maxFileSize, allowedTypes, token, user, associatedWith, onUploadComplete, onUploadError]);
+      }, [files.length, maxFiles, maxFileSize, allowedTypes, token, user, associatedWith, deferUpload, onUploadComplete, onUploadError]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -319,6 +359,7 @@ export const MediaUpload = forwardRef<MediaUploadRef, MediaUploadProps>((
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               Maximum {maxFiles} files, up to {formatFileSize(maxFileSize)} each
+              {deferUpload && <span className="block text-orange-600 mt-1">Files will be uploaded when you submit the comment</span>}
             </p>
             <input
               type="file"

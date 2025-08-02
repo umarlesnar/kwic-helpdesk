@@ -337,22 +337,7 @@ export class Database {
     return newActivity.toObject();
   }
 
-  static async updateActivity(activityId: string, updates: any) {
-    await connectToDatabase();
-    const updatedActivity = await TicketActivity.findByIdAndUpdate(
-      activityId,
-      { $set: updates },
-      { new: true }
-    );
-    return updatedActivity?.toObject();
-  }
 
-  static async getActivityById(activityId: string) {
-    await connectToDatabase();
-    if (!Types.ObjectId.isValid(activityId)) return null;
-    const activity = await TicketActivity.findById(activityId).lean();
-    return activity;
-  }
 
   // Dashboard metrics
   static async getDashboardMetrics() {

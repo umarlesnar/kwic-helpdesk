@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { MediaUpload } from '@/components/shared/MediaUpload';
+import { MediaUpload, MediaUploadRef } from '@/components/shared/MediaUpload';
 import { MediaGallery } from '@/components/shared/MediaGallery';
 import { ActivityMediaDropdown } from '@/components/shared/ActivityMediaDropdown';
 
@@ -58,9 +58,9 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [commentMediaIds, setCommentMediaIds] = useState<string[]>([]); // Store uploaded media IDs for comments
+
   // Ref to hold the clearFiles function from MediaUpload
-  const mediaUploadRef = useRef<{ clearFiles: () => void }>(null);
+  const mediaUploadRef = useRef<MediaUploadRef>(null);
 
 
   const [editData, setEditData] = useState({
@@ -124,10 +124,13 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
   }, [token, ticketId, fetchTicket]);
 
   const handleAddComment = async () => {
-    if (!comment.trim() && commentMediaIds.length === 0) return; // Prevent submitting empty comment without media
+    // Check if we have content or selected files
+    const selectedFiles = mediaUploadRef.current?.getSelectedFiles() || [];
+    if (!comment.trim() && selectedFiles.length === 0) return;
 
     setIsSubmittingComment(true);
     try {
+      // First, create the comment/activity
       const response = await fetch(`/api/tickets/${ticketId}/comments`, {
         method: "POST",
         headers: {
@@ -135,24 +138,53 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          content: comment.trim() || undefined, // Send content only if not empty
+          content: comment.trim() || undefined,
           isInternal,
-          media: commentMediaIds, // Include uploaded media IDs
         }),
       });
 
       if (response.ok) {
         const newActivity = await response.json();
+        
+        // Now upload files with the activity association
+        let uploadedMedia = [];
+        if (selectedFiles.length > 0 && mediaUploadRef.current) {
+          try {
+            uploadedMedia = await mediaUploadRef.current.uploadFiles({
+              type: 'activity',
+              id: newActivity._id || newActivity.id
+            });
+            console.log('Files uploaded successfully:', uploadedMedia.length);
+          } catch (uploadError) {
+            console.error('Error uploading files:', uploadError);
+            toast.error('Comment created but some files failed to upload');
+          }
+        }
+
+        // Update the activity with attachments if uploads succeeded
+        const finalActivity = {
+          ...newActivity,
+          attachments: uploadedMedia.map(media => ({
+            filename: media.filename,
+            originalName: media.originalName,
+            mimeType: media.mimeType,
+            size: media.size,
+            url: media.url
+          }))
+        };
+
         setTicket((prev: any) => ({
           ...prev,
-          activities: [...prev.activities, newActivity],
+          activities: [...prev.activities, finalActivity],
         }));
+        
         setComment("");
-        setCommentMediaIds([]);
-        // Clear files in MediaUpload using the ref
+        
+        // Clear files in MediaUpload
         if (mediaUploadRef.current) {
           mediaUploadRef.current.clearFiles();
         }
+        
         toast.success("Comment added successfully");
       } else {
         toast.error("Failed to add comment");
@@ -165,19 +197,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
     }
   };
 
-  const handleCommentMediaUploadComplete = (mediaObj: any) => {
-    setCommentMediaIds(prev => [...prev, mediaObj._id]);
-  };
 
-  // Function to handle media removal from MediaGallery
-  const handleMediaGalleryRemove = (mediaId: string) => {
-    setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
-  };
-
-  // Function to handle removal of an uploaded file from MediaUpload list
-  const handleUploadedFileRemove = (mediaId: string) => {
-    setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
-  };
 
   const handleSaveChanges = async () => {
     // Convert 'unassigned' to null for API (not empty string)
@@ -417,21 +437,9 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                 <div className="space-y-2">
                   <label className="font-medium">Attach Media Files</label>
                   <MediaUpload
-                    associatedWith={{ type: 'comment', id: ticketId }}
-                    onUploadComplete={handleCommentMediaUploadComplete}
+                    deferUpload={true}
                     onUploadError={err => toast.error(err || 'Upload failed')}
                     ref={mediaUploadRef}
-                    onUploadedFileRemoved={(mediaId) => {
-                      setCommentMediaIds((prev: string[]) => prev.filter((id: string) => id !== mediaId));
-                    }}
-                  />
-
-                  <MediaGallery
-                    associatedWith={{ types: ['ticket', 'comment'], id: ticketId }}
-                    onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])} // Allow selecting existing media
-                    onMediaRemoved={handleMediaGalleryRemove} // Pass the removal callback
-                    selectable
-                    className="mt-4"
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -447,7 +455,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                   </div>
                   <Button
                     onClick={handleAddComment}
-                    disabled={(!comment.trim() && commentMediaIds.length === 0) || isSubmittingComment}
+                    disabled={isSubmittingComment}
                   >
                     {isSubmittingComment ? (
                       "Adding..."
