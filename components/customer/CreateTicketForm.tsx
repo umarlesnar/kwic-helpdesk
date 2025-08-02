@@ -92,32 +92,14 @@ export function CreateTicketForm() {
           className: 'success-toast',
           duration: 4000,
         });
-       // Reassign uploaded media to the new ticket
-try {
-  await fetch('/api/media/reassign', {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      oldAssociatedId: tempTicketId,
-      newAssociatedId: ticket._id,
-      type: 'ticket'
-    })
-  });
-} catch (err) {
-  console.error('Failed to reassign media:', err);
-}
 
-// Clear local state & upload list
-setMediaIds([]);
-mediaUploadRef.current?.clearFiles();
+        // Clear local state & upload list
+        setMediaIds([]);
+        mediaUploadRef.current?.clearFiles();
 
-// Navigate to the new ticket
-router.push(`/customer/tickets/${ticket._id}`);
-      }
- else {
+        // Navigate to the new ticket
+        router.push(`/customer/tickets/${ticket._id}`);
+      } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to create request');
       }

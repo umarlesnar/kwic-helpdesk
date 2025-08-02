@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
+<<<<<<< HEAD
+=======
+import { connectToDatabase } from '@/lib/schemas';
+>>>>>>> origin/main
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/schemas';
 
@@ -59,6 +63,9 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // Ensure database connection
+    await connectToDatabase();
+
     const activity = await Database.createActivity({
       ticketId: String(params.id),
       userId: String(user._id),
@@ -68,54 +75,62 @@ export async function POST(
     });
     
     // Process media attachments if provided
-    let attachments = [];
+    let attachments: Array<{
+      filename: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+      url: string;
+    }> = [];
+    
     if (media && media.length > 0) {
       try {
         console.log('Processing media for activity:', activity._id, 'Media IDs:', media);
         
-        // Ensure database connection
-        await connectToDatabase();
+        // Convert media IDs to ObjectIds and filter out invalid ones
+        const mediaObjectIds = media
+          .filter((id: any) => id && mongoose.Types.ObjectId.isValid(id))
+          .map((id: string) => new mongoose.Types.ObjectId(id));
         
-        // Convert media IDs to ObjectIds
-        const mediaObjectIds = media.map(id => 
-          mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
-        );
+        console.log('Valid media ObjectIds:', mediaObjectIds);
         
-        // Get the media objects first
-        const mediaObjects = await Media.find({ _id: { $in: mediaObjectIds } });
-        console.log('Found media objects for activity:', mediaObjects.length);
-        
-        if (mediaObjects.length > 0) {
-          // Create attachments array for the activity
-          attachments = mediaObjects.map(m => ({
-            filename: m.filename,
-            originalName: m.originalName,
-            mimeType: m.mimeType,
-            size: m.size,
-            url: m.url
-          }));
-
-          // Convert activity._id to ObjectId  
-          const activityObjectId = mongoose.Types.ObjectId.isValid(activity._id) 
-            ? new mongoose.Types.ObjectId(activity._id) 
-            : activity._id;
+        if (mediaObjectIds.length > 0) {
+          // Get the media objects first
+          const mediaObjects = await Media.find({ _id: { $in: mediaObjectIds } });
+          console.log('Found media objects for activity:', mediaObjects.length);
           
-          // Update media to associate with this activity
-          const updatedMedia = await Media.updateMany(
-            { _id: { $in: mediaObjectIds } },
-            { 
-              $set: { 
-                'associatedWith.type': 'activity',
-                'associatedWith.id': activityObjectId
+          if (mediaObjects.length > 0) {
+            // Create attachments array for the activity
+            attachments = mediaObjects.map(m => ({
+              filename: m.filename,
+              originalName: m.originalName,
+              mimeType: m.mimeType,
+              size: m.size,
+              url: m.url
+            }));
+
+            // Convert activity._id to ObjectId  
+            const activityObjectId = mongoose.Types.ObjectId.isValid(activity._id) 
+              ? new mongoose.Types.ObjectId(activity._id) 
+              : activity._id;
+            
+            // Update media to associate with this activity
+            const updatedMedia = await Media.updateMany(
+              { _id: { $in: mediaObjectIds } },
+              { 
+                $set: { 
+                  'associatedWith.type': 'activity',
+                  'associatedWith.id': activityObjectId
+                }
               }
-            }
-          );
-          
-          console.log('Media association update result:', updatedMedia);
+            );
+            
+            console.log('Media association update result:', updatedMedia);
 
-          // Update the activity with attachments in the database
-          const updatedActivity = await Database.updateActivity(activity._id, { attachments });
-          console.log('Activity updated with attachments:', !!updatedActivity);
+            // Update the activity with attachments in the database
+            const updatedActivity = await Database.updateActivity(activity._id, { attachments });
+            console.log('Activity updated with attachments:', !!updatedActivity);
+          }
         }
         
       } catch (error) {
