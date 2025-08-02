@@ -4,6 +4,7 @@ import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
 import { connectToDatabase } from '@/lib/database';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,8 @@ export async function POST(
       content,
       isInternal,
     });
+    
+    console.log('Created activity:', activity);
 
     // Associate media with the activity if provided
     let attachments = [];
@@ -75,12 +78,22 @@ export async function POST(
         await connectToDatabase();
         
         // Update media to associate with this activity
+        // Convert media IDs to ObjectIds
+        const mediaObjectIds = media.map(id => 
+          mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+        );
+        
+        // Convert activity._id to ObjectId  
+        const activityObjectId = mongoose.Types.ObjectId.isValid(activity._id) 
+          ? new mongoose.Types.ObjectId(activity._id) 
+          : activity._id;
+        
         const updatedMedia = await Media.updateMany(
-          { _id: { $in: media } },
+          { _id: { $in: mediaObjectIds } },
           { 
             $set: { 
               'associatedWith.type': 'activity',
-              'associatedWith.id': activity._id
+              'associatedWith.id': activityObjectId
             }
           }
         );
@@ -88,7 +101,7 @@ export async function POST(
         console.log('Media update result:', updatedMedia);
 
         // Get the media objects for attachments
-        const mediaObjects = await Media.find({ _id: { $in: media } });
+        const mediaObjects = await Media.find({ _id: { $in: mediaObjectIds } });
         console.log('Found media objects:', mediaObjects.length);
         
         attachments = mediaObjects.map(m => ({

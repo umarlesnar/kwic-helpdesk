@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/lib/auth';
 import { Media } from '@/lib/schemas/media.schema';
 import { z } from 'zod';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,8 +80,13 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (associatedId && (associatedTypes ?? []).length > 0) {
-      query['associatedWith.id'] = associatedId;
+      // Convert associatedId to ObjectId if it's a valid ObjectId string
+      const objectId = mongoose.Types.ObjectId.isValid(associatedId) 
+        ? new mongoose.Types.ObjectId(associatedId) 
+        : associatedId;
+      query['associatedWith.id'] = objectId;
       query['associatedWith.type'] = { $in: associatedTypes };
+      console.log('Media list query with associatedId:', { associatedId, objectId, associatedTypes });
     } else if ((associatedTypes ?? []).length > 0) {
       query['associatedWith.type'] = { $in: associatedTypes };
     }
