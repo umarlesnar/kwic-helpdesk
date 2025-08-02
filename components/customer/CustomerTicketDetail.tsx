@@ -394,7 +394,8 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                       
                       {/* Media dropdown for this activity */}
                       <ActivityMediaDropdown 
-                        activityId={activity._id || activity.id} 
+                        activityId={activity._id || activity.id}
+                        activity={activity}
                         className="mt-2" 
                       />
                     </div>

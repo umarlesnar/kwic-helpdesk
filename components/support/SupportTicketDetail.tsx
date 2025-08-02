@@ -389,7 +389,8 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                       
                       {/* Media dropdown for this activity */}
                       <ActivityMediaDropdown 
-                        activityId={activity._id} 
+                        activityId={activity._id}
+                        activity={activity}
                         className="mt-2" 
                       />
                     </div>
