@@ -15,7 +15,7 @@ const confirmUploadSchema = z.object({
   mimeType: z.string().min(1, 'Mime type is required'),
   uploadedBy: z.string().min(1, 'Uploader is required'),
   associatedWith: z.object({
-    type: z.enum(['ticket', 'user', 'comment', 'system']),
+    type: z.enum(['ticket', 'user', 'comment', 'activity', 'system']),
     id: z.string().min(1, 'Associated ID is required')
   }),
   tags: z.array(z.string()).default([]),

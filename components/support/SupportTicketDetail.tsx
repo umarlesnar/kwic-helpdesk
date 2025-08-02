@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from '@/components/shared/MediaUpload';
 import { MediaGallery } from '@/components/shared/MediaGallery';
+import { ActivityMediaDropdown } from '@/components/shared/ActivityMediaDropdown';
 
 import {
   Select,
@@ -58,21 +59,6 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [commentMediaIds, setCommentMediaIds] = useState<string[]>([]); // Store uploaded media IDs for comments
-  const [expanded, setExpanded] = useState<string[]>([]);
-
-  const toggleExpanded = (id: string) => {
-    setExpanded(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  type Attachment = {
-    filename: string;
-    originalName: string;
-    mimeType: string;
-    size: number;
-    url: string;
-  };
   // Ref to hold the clearFiles function from MediaUpload
   const mediaUploadRef = useRef<{ clearFiles: () => void }>(null);
 
@@ -372,69 +358,43 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {ticket.activities?.map((activity: any) => {
-                  // Check if there is media associated with this activity
-                  const hasMedia = ticket.media?.some(
-                    (m: any) =>
-                      m.associatedWith?.type === 'activity' &&
-                      m.associatedWith?.id === activity._id
-                  );
-
-                  return (
-                    <div key={activity._id} className="flex flex-col gap-1">
-                      <div className="flex gap-4">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-                            {activity.user?.name?.charAt(0).toUpperCase() || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">
-                              {activity.user?.name || "Unknown User"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {format(new Date(activity.createdAt), "MMM d, yyyy h:mm a")}
-                            </span>
-                            {activity.isInternal && (
-                              <Badge variant="secondary" className="text-xs">
-                                Internal
-                              </Badge>
-                            )}
-                            {hasMedia && (
-                              <button
-                                onClick={() => toggleExpanded(activity._id)}
-                                className="ml-auto text-xs text-blue-500 hover:underline"
-                              >
-                                {expanded.includes(activity._id) ? "Hide media" : "Show media"}
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-700">
-                            {activity.type === "comment" ? (
-                              <p className="whitespace-pre-wrap">{activity.content}</p>
-                            ) : (
-                              <p className="italic">{activity.content}</p>
-                            )}
-                          </div>
-                        </div>
+                {ticket.activities?.map((activity: any) => (
+                  <div key={activity._id} className="flex gap-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+                        {activity.user?.name?.charAt(0).toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">
+                          {activity.user?.name || "Unknown User"}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {format(new Date(activity.createdAt), "MMM d, yyyy h:mm a")}
+                        </span>
+                        {activity.isInternal && (
+                          <Badge variant="secondary" className="text-xs">
+                            Internal
+                          </Badge>
+                        )}
                       </div>
-                      {/* Conditionally render media gallery if expanded */}
-                      {expanded.includes(activity._id) && activity.attachments?.length > 0 && (
-                        <div className="pl-12 mt-2 grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {activity.attachments.map((media: Attachment, idx: number) => (
-                            <div key={idx} className="border rounded p-2 text-xs">
-                              <a href={media.url} target="_blank" rel="noopener noreferrer">
-                                {media.originalName}
-                              </a>
-                              <div className="text-gray-500">{(media.size / 1024).toFixed(1)} KB</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <div className="text-sm text-gray-700">
+                        {activity.type === "comment" ? (
+                          <p className="whitespace-pre-wrap">{activity.content}</p>
+                        ) : (
+                          <p className="italic">{activity.content}</p>
+                        )}
+                      </div>
+                      
+                      {/* Media dropdown for this activity */}
+                      <ActivityMediaDropdown 
+                        activityId={activity._id} 
+                        className="mt-2" 
+                      />
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -456,7 +416,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                 <div className="space-y-2">
                   <label className="font-medium">Attach Media Files</label>
                   <MediaUpload
-                    associatedWith={{ type: 'comment', id: ticketId }} // Associate with the ticket ID for now
+                    associatedWith={{ type: 'comment', id: ticketId }}
                     onUploadComplete={handleCommentMediaUploadComplete}
                     onUploadError={err => toast.error(err || 'Upload failed')}
                     ref={mediaUploadRef}

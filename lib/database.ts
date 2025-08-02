@@ -337,6 +337,16 @@ export class Database {
     return newActivity.toObject();
   }
 
+  static async updateActivity(activityId: string, updates: any) {
+    await connectToDatabase();
+    const updatedActivity = await TicketActivity.findByIdAndUpdate(
+      activityId,
+      { $set: updates },
+      { new: true }
+    );
+    return updatedActivity?.toObject();
+  }
+
   // Dashboard metrics
   static async getDashboardMetrics() {
     await connectToDatabase();

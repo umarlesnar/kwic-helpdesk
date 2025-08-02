@@ -22,7 +22,7 @@ export interface IMedia extends Document {
   };
   uploadedBy: Schema.Types.ObjectId;
   associatedWith: {
-    type: 'ticket' | 'user' | 'comment' | 'system';
+    type: 'ticket' | 'user' | 'comment' | 'activity' | 'system';
     id: Schema.Types.ObjectId;
   };
   tags: string[];
@@ -92,7 +92,7 @@ const mediaSchema = new Schema<IMedia>({
   associatedWith: {
     type: {
       type: String,
-      enum: ['ticket', 'user', 'comment', 'system'],
+      enum: ['ticket', 'user', 'comment', 'activity', 'system'],
       required: true
     },
     id: {

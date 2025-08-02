@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Database } from '@/lib/database';
 import { getSessionFromRequest } from '@/lib/auth';
+import { Media } from '@/lib/schemas/media.schema';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +21,11 @@ export async function POST(
 
     console.log('Session found for user:', session.email);
 
-    const { content, isInternal = false } = await request.json();
+    const { content, isInternal = false, media = [] } = await request.json();
 
-    if (!content) {
+    if (!content && (!media || media.length === 0)) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { error: 'Content or media is required' },
         { status: 400 }
       );
     }
@@ -63,13 +64,39 @@ export async function POST(
       isInternal,
     });
 
-    // Get user data for response
-    // Already have user from above
+    // Associate media with the activity if provided
+    let attachments = [];
+    if (media && media.length > 0) {
+      // Update media to associate with this activity
+      const updatedMedia = await Media.updateMany(
+        { _id: { $in: media } },
+        { 
+          $set: { 
+            'associatedWith.type': 'activity',
+            'associatedWith.id': activity._id
+          }
+        }
+      );
+
+      // Get the media objects for attachments
+      const mediaObjects = await Media.find({ _id: { $in: media } });
+      attachments = mediaObjects.map(m => ({
+        filename: m.filename,
+        originalName: m.originalName,
+        mimeType: m.mimeType,
+        size: m.size,
+        url: m.url
+      }));
+
+      // Update the activity with attachments
+      await Database.updateActivity(activity._id, { attachments });
+    }
 
     console.log('Comment added successfully to ticket:', params.id);
 
     return NextResponse.json({
       ...activity,
+      attachments,
       user: user ? { id: user._id, name: user.name, email: user.email } : null,
     }, { status: 201 });
   } catch (error) {

@@ -58,7 +58,11 @@ export function MediaGallery({
   const [pagination, setPagination] = useState<any>(null);
 
   useEffect(() => {
-    fetchMedia();
+    const timeoutId = setTimeout(() => {
+      fetchMedia();
+    }, 300); // Debounce search by 300ms
+
+    return () => clearTimeout(timeoutId);
   }, [associatedWith, searchTerm, categoryFilter, sortBy, sortOrder, page]);
 
   const fetchMedia = async () => {
@@ -111,8 +115,7 @@ export function MediaGallery({
 
   useEffect(() => {
     setPage(1);
-    fetchMedia();
-  }, [associatedWith?.id]);
+  }, [associatedWith?.id, searchTerm, categoryFilter]);
   
 
   const handleDownload = async (mediaItem: any) => {

@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { MediaUpload, MediaUploadRef } from '@/components/shared/MediaUpload';
 import { MediaGallery } from '@/components/shared/MediaGallery';
+import { ActivityMediaDropdown } from '@/components/shared/ActivityMediaDropdown';
 
 interface CustomerTicketDetailProps {
   ticketId: string;
@@ -389,8 +390,13 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                         ) : (
                           <p className="italic">{activity.content}</p>
                         )}
-
                       </div>
+                      
+                      {/* Media dropdown for this activity */}
+                      <ActivityMediaDropdown 
+                        activityId={activity._id || activity.id} 
+                        className="mt-2" 
+                      />
                     </div>
                   </div>
                 ))}

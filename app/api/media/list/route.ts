@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const listMediaSchema = z.object({
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
-  associatedTypes: z.array(z.enum(['ticket', 'user', 'comment', 'system'])).optional(),
+  associatedTypes: z.array(z.enum(['ticket', 'user', 'comment', 'activity', 'system'])).optional(),
   associatedId: z.string().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
