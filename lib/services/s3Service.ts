@@ -24,7 +24,7 @@ export interface PresignedUrlOptions {
 export interface UploadMetadata {
   uploadedBy: string;
   associatedWith: {
-    type: 'ticket' | 'user' | 'comment' | 'system';
+    type: 'ticket' | 'user' | 'comment' | 'system' | 'activity';
     id: string;
   };
   tags?: string[];

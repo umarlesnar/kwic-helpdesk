@@ -408,7 +408,7 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
             </CardContent>
           </Card>
 
-          {/* Add Comment */}
+          {/* Add Comment Card */}
           <Card>
             <CardHeader>
               <CardTitle>Add Comment</CardTitle>
@@ -421,7 +421,8 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                   placeholder="Add a comment..."
                   rows={4}
                 />
-                {/* Media Upload & Gallery for comments */}
+
+                {/* Media Upload */}
                 <div className="space-y-2">
                   <label className="font-medium">Attach Media Files</label>
                   <MediaUpload
@@ -433,23 +434,14 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                       setCommentMediaIds((prev: string[]) => prev.filter((id: string) => id !== mediaId));
                     }}
                   />
-
-                  <MediaGallery
-                    associatedWith={{ types: ['ticket', 'comment'], id: ticketId }}
-                    onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])} // Allow selecting existing media
-                    onMediaRemoved={handleMediaGalleryRemove} // Pass the removal callback
-                    selectable
-                    className="mt-4"
-                  />
                 </div>
+
                 <div className="flex justify-end">
                   <Button
                     onClick={handleAddComment}
                     disabled={(!comment.trim() && commentMediaIds.length === 0) || isSubmittingComment}
                   >
-                    {isSubmittingComment ? (
-                      'Adding...'
-                    ) : (
+                    {isSubmittingComment ? 'Adding...' : (
                       <>
                         <Send className="h-4 w-4 mr-2" />
                         Add Comment
@@ -457,6 +449,15 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
                     )}
                   </Button>
                 </div>
+
+                {/* Moved MediaGallery here */}
+                <MediaGallery
+                  associatedWith={{ types: ['ticket', 'comment', 'activity'], id: ticketId }}
+                  onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])}
+                  onMediaRemoved={handleMediaGalleryRemove}
+                  selectable
+                  className="mt-4"
+                />
               </div>
             </CardContent>
           </Card>

@@ -1,7 +1,7 @@
 //components/shared/ActivityMediaDropdown.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/shared/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
   const [media, setMedia] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCheckedMedia, setHasCheckedMedia] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check for media on component mount or when activity changes
@@ -45,6 +46,19 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
       checkForMedia();
     }
   }, [activityId, activity]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (isExpanded && !media.length) {
@@ -149,7 +163,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
   const mediaCount = media.length;
 
   return (
-    <div className={`${className}`}>
+    <div className={`relative ${className}`} ref={dropdownRef}>
       <Button
         variant="ghost"
         size="sm"
@@ -170,7 +184,7 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
       </Button>
 
       {isExpanded && (
-      <div className="absolute left-0 mt-1 w-64 p-1 z-20 bg-white shadow-lg rounded-md border border-gray-200">
+        <div className="absolute left-0 mt-1 w-56 z-80 bg-white shadow-lg rounded-md border border-gray-200">
           {isLoading ? (
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
