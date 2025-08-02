@@ -119,7 +119,7 @@ export function CreateTicketForm() {
   };
 
   const handleMediaUploadComplete = (mediaObj: any) => {
-    setMediaIds(prev => [...prev, mediaObj._id]);
+    setMediaIds(prev => [...prev, mediaObj.id]);
   };
 
   // Always normalize SLA for all request types before rendering

@@ -21,8 +21,7 @@ const fcmTokenSchema = new Schema<IFCMToken>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   token: {
     type: String,
@@ -37,8 +36,7 @@ const fcmTokenSchema = new Schema<IFCMToken>({
   },
   isActive: {
     type: Boolean,
-    default: true,
-    index: true
+    default: true
   },
   lastUsed: {
     type: Date,
