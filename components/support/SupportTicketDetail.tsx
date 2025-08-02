@@ -166,7 +166,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
   };
 
   const handleCommentMediaUploadComplete = (mediaObj: any) => {
-    setCommentMediaIds(prev => [...prev, mediaObj._id]);
+    setCommentMediaIds(prev => [...prev, mediaObj.id]);
   };
 
   // Function to handle media removal from MediaGallery
@@ -417,7 +417,7 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
                 <div className="space-y-2">
                   <label className="font-medium">Attach Media Files</label>
                   <MediaUpload
-                    associatedWith={{ type: 'comment', id: ticketId }}
+                    associatedWith={{ type: 'ticket', id: ticketId }}
                     onUploadComplete={handleCommentMediaUploadComplete}
                     onUploadError={err => toast.error(err || 'Upload failed')}
                     ref={mediaUploadRef}

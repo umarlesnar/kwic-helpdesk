@@ -116,7 +116,7 @@ export async function POST(
               { 
                 $set: { 
                   'associatedWith.type': 'activity',
-                  'associatedWith.id': activityObjectId
+                  'associatedWith.id': String(activity._id)
                 }
               }
             );
