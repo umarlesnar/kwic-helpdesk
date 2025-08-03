@@ -129,6 +129,25 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
   // Function to handle media removal from MediaGallery
   const handleMediaGalleryRemove = (mediaId: string) => {
     setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
+
+    // Update ticket state to reflect media deletion in activities
+    setTicket((prev: { activities: any[]; }) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        activities: prev.activities.map(activity => {
+          if (!activity.attachments) return activity;
+
+          return {
+            ...activity,
+            attachments: activity.attachments.filter(
+              (att: any) => att._id !== mediaId && att.id !== mediaId
+            )
+          };
+        })
+      };
+    });
   };
 
   // Function to handle removal of an uploaded file from MediaUpload list
@@ -452,7 +471,8 @@ export function CustomerTicketDetail({ ticketId }: CustomerTicketDetailProps) {
 
                 {/* Moved MediaGallery here */}
                 <MediaGallery
-                  associatedWith={{ types: ['ticket', 'comment', 'activity'], id: ticketId, 
+                  associatedWith={{
+                    types: ['ticket', 'comment', 'activity'], id: ticketId,
                     activityIds: ticket.activities?.map((a: { _id: any; id: any; }) => a._id || a.id) || []
                   }}
                   onMediaSelect={mediaObj => setCommentMediaIds(prev => [...prev, mediaObj._id])}

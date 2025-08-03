@@ -172,6 +172,25 @@ export function SupportTicketDetail({ ticketId }: SupportTicketDetailProps) {
   // Function to handle media removal from MediaGallery
   const handleMediaGalleryRemove = (mediaId: string) => {
     setCommentMediaIds(prev => prev.filter(id => id !== mediaId));
+
+    // Update ticket state to reflect media deletion in activities
+    setTicket((prev: { activities: any[]; }) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        activities: prev.activities.map(activity => {
+          if (!activity.attachments) return activity;
+
+          return {
+            ...activity,
+            attachments: activity.attachments.filter(
+              (att: any) => att._id !== mediaId && att.id !== mediaId
+            )
+          };
+        })
+      };
+    });
   };
 
   // Function to handle removal of an uploaded file from MediaUpload list

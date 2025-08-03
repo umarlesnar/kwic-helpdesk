@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/shared/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   ChevronDown,
   ChevronUp,
@@ -12,9 +11,7 @@ import {
   Video,
   FileText,
   File,
-  Download,
-  Eye
-} from 'lucide-react';
+  Eye} from 'lucide-react';
 import { formatFileSize } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -22,49 +19,21 @@ interface ActivityMediaDropdownProps {
   activityId: string;
   activity?: any; // Pass the activity object to check attachments
   className?: string;
+  onMediaDeleted?: () => void; // New prop to handle media deletion
 }
 
-export function ActivityMediaDropdown({ activityId, activity, className = '' }: ActivityMediaDropdownProps) {
+export function ActivityMediaDropdown({
+  activityId,
+  activity,
+  className = '',
+  onMediaDeleted
+}: ActivityMediaDropdownProps) {
   const { token } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [media, setMedia] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasCheckedMedia, setHasCheckedMedia] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Check for media on component mount or when activity changes
-    if (activity?.attachments?.length > 0) {
-      // If activity has attachments, use them directly
-      setMedia(activity.attachments.map((att: { filename: any; }) => ({
-        _id: `${activityId}-${att.filename}`, // Create a unique ID
-        ...att
-      })));
-      setHasCheckedMedia(true);
-    } else {
-      // Otherwise check via API
-      checkForMedia();
-    }
-  }, [activityId, activity]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsExpanded(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isExpanded && !media.length) {
-      fetchActivityMedia();
-    }
-  }, [isExpanded, activityId]);
 
   const checkForMedia = async () => {
     try {
@@ -86,10 +55,12 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
         setHasCheckedMedia(true);
       } else {
         setHasCheckedMedia(true);
+        setMedia([]);
       }
     } catch (error) {
       console.error('Error checking for activity media:', error);
       setHasCheckedMedia(true);
+      setMedia([]);
     }
   };
 
@@ -114,14 +85,64 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
         setMedia(data.media);
       } else {
         toast.error('Failed to load media files');
+        setMedia([]);
       }
     } catch (error) {
       console.error('Error fetching activity media:', error);
       toast.error('Failed to load media files');
+      setMedia([]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const refreshMedia = async () => {
+    if (activity?.attachments?.length > 0) {
+      // If activity has attachments, use them directly
+      setMedia(activity.attachments.map((att: { filename: any; }) => ({
+        _id: `${activityId}-${att.filename}`, // Create a unique ID
+        ...att
+      })));
+      setHasCheckedMedia(true);
+    } else {
+      // Otherwise check via API
+      await checkForMedia();
+    }
+  };
+
+  useEffect(() => {
+    refreshMedia();
+  }, [activity]);
+
+  useEffect(() => {
+    refreshMedia();
+  }, [activityId, activity]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isExpanded) {
+      fetchActivityMedia();
+    }
+  }, [isExpanded, activityId]);
+
+  useEffect(() => {
+    if (onMediaDeleted) {
+      // If parent component notifies about media deletion, refresh
+      refreshMedia();
+    }
+  }, [onMediaDeleted]);
 
   const handleDownload = async (mediaItem: any) => {
     if (mediaItem.isPublic && mediaItem.url) {
@@ -164,24 +185,26 @@ export function ActivityMediaDropdown({ activityId, activity, className = '' }: 
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="text-xs text-green-500 hover:text-green-700 p-1 h-auto"
-      >
-        {isExpanded ? (
-          <>
-            <ChevronUp className="h-3 w-3 mr-1" />
-            Hide attachments ({mediaCount})
-          </>
-        ) : (
-          <>
-            <ChevronDown className="h-3 w-3 mr-1" />
-            Attachments ({isLoading ? '...' : mediaCount})
-          </>
-        )}
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-xs text-green-500 hover:text-green-700 p-1 h-auto"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-3 w-3 mr-1" />
+              Hide attachments ({mediaCount})
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3 mr-1" />
+              Attachments ({isLoading ? '...' : mediaCount})
+            </>
+          )}
+        </Button>
+      </div>
 
       {isExpanded && (
         <div className="absolute left-0 mt-1 w-56 z-80 bg-white shadow-lg rounded-md border border-gray-200">
